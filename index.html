@@ -1,49 +1,38 @@
-
 <!DOCTYPE html>
-<html lang="ru">
-<head>
+<html lang="en">
+
+  <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KUMONIX HUB | Софт, ИИ и Игры</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <title>Untitled</title>
+    <link rel="stylesheet" href="./style.css">
 
-    <nav>
-        <div class="logo">KUMONIX <span>HUB</span></div>
-    </nav>
+  </head>
+    
+  <body>
+  <div class="app-container">
+  <div class="sidebar">
+    <div class="logo">KUMONIX<span>SHOP</span></div>
+    <div class="categories">
+      <div class="cat active" onclick="filter('all')">🔥 Все товары (<span id="count">0</span>)</div>
+      <div class="cat" onclick="filter('vape')">💨 Электронки</div>
+      <div class="cat" onclick="filter('liquid')">🧪 Жижка</div>
+      <div class="cat" onclick="filter('snus')">🐰 Снюс</div>
+    </div>
+    <div class="sidebar-info">
+      <p>Связь: <a href="https://t.me/xeqov" target="_blank">@xeqov</a></p>
+      <p class="age-limit">18+ ONLY</p>
+    </div>
+  </div>
 
-    <header>
-        <h1>Всё для геймера и девелопера</h1>
-        <p>Нейросети, взломанный софт и гайды в одном месте.</p>
-    </header>
+  <div class="main-content">
+    <div class="header">
+      <input type="text" id="search" placeholder="Поиск среди 300+ товаров...">
+    </div>
+    <div class="product-grid" id="grid"></div>
+  </div>
+</div>
+    <script  src="./script.js"></script>
 
-    <section class="grid">
-        <div class="card">
-            <span class="tag">AI</span>
-            <h3>Gemini Pro</h3>
-            <p>Твой личный ИИ для кода и общения. Помогает мне писать этот сайт.</p>
-            <a href="https://gemini.google.com" class="btn">Открыть</a>
-        </div>
-
-        <div class="card">
-            <span class="tag green">Games</span>
-            <h3>My Summer Car</h3>
-            <p>Свежая версия + пак из 34 модов. Залито на Google Drive.</p>
-            <a href="#" class="btn">Скачать</a>
-        </div>
-
-        <div class="card">
-            <span class="tag purple">Hardware</span>
-            <h3>LGA 1155 Guide</h3>
-            <p>Как выжать максимум из Xeon E3-1230 v2 и i5-3470.</p>
-            <a href="#" class="btn">Читать</a>
-        </div>
-    </section>
-
-    <footer>
-        <p>&copy; 2026 Developed by Mihail (Kumonix)</p>
-    </footer>
-
-</body>
+  </body>
+  
 </html>
