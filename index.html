@@ -1,38 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+<head>
+    <title>3D Shooter Base</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="ui">Команда А: 0 | Команда Б: 0</div>
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
 
-  <head>
-    <meta charset="UTF-8">
-    <title>Untitled</title>
-    <link rel="stylesheet" href="./style.css">
+        // 1. Сцена и Камера
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Небо
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-  </head>
-    
-  <body>
-  <div class="app-container">
-  <div class="sidebar">
-    <div class="logo">KUMONIX<span>SHOP</span></div>
-    <div class="categories">
-      <div class="cat active" onclick="filter('all')">🔥 Все товары (<span id="count">0</span>)</div>
-      <div class="cat" onclick="filter('vape')">💨 Электронки</div>
-      <div class="cat" onclick="filter('liquid')">🧪 Жижка</div>
-      <div class="cat" onclick="filter('snus')">🐰 Снюс</div>
-    </div>
-    <div class="sidebar-info">
-      <p>Связь: <a href="https://t.me/xeqov" target="_blank">@xeqov</a></p>
-      <p class="age-limit">18+ ONLY</p>
-    </div>
-  </div>
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-  <div class="main-content">
-    <div class="header">
-      <input type="text" id="search" placeholder="Поиск среди 300+ товаров...">
-    </div>
-    <div class="product-grid" id="grid"></div>
-  </div>
-</div>
-    <script  src="./script.js"></script>
+        // 2. Свет
+        const light = new THREE.AmbientLight(0x404040); // Мягкий свет
+        scene.add(light);
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(5, 10, 7);
+        scene.add(sun);
 
-  </body>
-  
+        // 3. Пол (Карта)
+        const planeGeo = new THREE.PlaneGeometry(100, 100);
+        const planeMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+        const floor = new THREE.Mesh(planeGeo, planeMat);
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
+
+        // 4. Твой персонаж (в 3D это просто куб для начала)
+        const playerGeo = new THREE.BoxGeometry(1, 2, 1);
+        const playerMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const player = new THREE.Mesh(playerGeo, playerMat);
+        player.position.y = 1;
+        scene.add(player);
+
+        camera.position.z = 5;
+        camera.position.y = 2;
+
+        // 5. Движение (WASD)
+        const keys = {};
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (keys['KeyW']) player.position.z -= 0.1;
+            if (keys['KeyS']) player.position.z += 0.1;
+            if (keys['KeyA']) player.position.x -= 0.1;
+            if (keys['KeyD']) player.position.x += 0.1;
+
+            // Камера следует за игроком
+            camera.position.x = player.position.x;
+            camera.position.z = player.position.z + 5;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
 </html>
