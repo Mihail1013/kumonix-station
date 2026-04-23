@@ -1,189 +1,134 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Neon Survivor 2026</title>
+    <title>JS Zombie Apocalypse</title>
     <style>
-        body { margin: 0; background: #050505; color: #fff; font-family: 'Courier New', monospace; overflow: hidden; }
-        canvas { display: block; filter: contrast(1.2) brightness(1.1); }
-        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
-        .stats { font-size: 24px; text-shadow: 0 0 10px #00ff00; }
+        body { margin: 0; overflow: hidden; background: #222; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <div class="stats">SCORE: <span id="score">0</span></div>
-        <div style="color: #ff0000;">HP: <span id="hp">100</span>%</div>
-    </div>
-    <canvas id="game"></canvas>
+<canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const hpEl = document.getElementById('hp');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let score = 0;
-let hp = 100;
+// Картинки (используем бесплатные спрайты)
+const imgPlayer = new Image(); imgPlayer.src = 'https://img.icons8.com/color/96/soldier.png';
+const imgZombie = new Image(); imgZombie.src = 'https://img.icons8.com/color/96/zombie-side-view.png';
+const imgBlood = new Image(); imgBlood.src = 'https://img.icons8.com/color/48/drop-of-blood.png';
+
+const player = { x: 0, y: 0, size: 50, speed: 5, angle: 0 };
 const keys = {};
-
-// Игрок
-const player = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    size: 15,
-    speed: 4,
-    color: '#00ff00',
-    angle: 0
-};
-
 const bullets = [];
 const enemies = [];
-const particles = [];
+const bloodStains = [];
+let score = 0;
 
-// Слушаем кнопки
 window.onkeydown = (e) => keys[e.code] = true;
 window.onkeyup = (e) => keys[e.code] = false;
 
-// Эффект взрыва
-function spawnParticles(x, y, color) {
-    for(let i=0; i<10; i++) {
-        particles.push({
-            x, y, 
-            vX: (Math.random()-0.5)*10, 
-            vY: (Math.random()-0.5)*10, 
-            life: 1, 
-            color
-        });
-    }
-}
-
-// Клик - выстрел
 window.onmousedown = () => {
-    if (hp <= 0) return;
-    const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
-    bullets.push({
-        x: player.x,
-        y: player.y,
-        vX: Math.cos(angle) * 12,
-        vY: Math.sin(angle) * 12
-    });
+    const angle = Math.atan2(mouse.y - canvas.height/2, mouse.x - canvas.width/2);
+    bullets.push({ x: player.x, y: player.y, vX: Math.cos(angle)*15, vY: Math.sin(angle)*15 });
 };
 
 const mouse = { x: 0, y: 0 };
 window.onmousemove = (e) => { mouse.x = e.clientX; mouse.y = e.clientY; };
 
 function spawnEnemy() {
-    if (hp <= 0) return;
-    const size = 20;
-    let x, y;
-    if (Math.random() < 0.5) {
-        x = Math.random() < 0.5 ? -size : canvas.width + size;
-        y = Math.random() * canvas.height;
-    } else {
-        x = Math.random() * canvas.width;
-        y = Math.random() < 0.5 ? -size : canvas.height + size;
-    }
-    enemies.push({ x, y, size, speed: 1.5 + (score/100) });
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 800;
+    enemies.push({ 
+        x: player.x + Math.cos(angle) * dist, 
+        y: player.y + Math.sin(angle) * dist, 
+        size: 40 
+    });
 }
-setInterval(spawnEnemy, 800);
+setInterval(spawnEnemy, 1000);
 
 function update() {
-    if (hp <= 0) return;
-
-    // Движение
     if (keys['KeyW']) player.y -= player.speed;
     if (keys['KeyS']) player.y += player.speed;
     if (keys['KeyA']) player.x -= player.speed;
     if (keys['KeyD']) player.x += player.speed;
 
-    // Пули
+    player.angle = Math.atan2(mouse.y - canvas.height/2, mouse.x - canvas.width/2);
+
     bullets.forEach((b, i) => {
         b.x += b.vX; b.y += b.vY;
-        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(i, 1);
+        if (Math.hypot(b.x - player.x, b.y - player.y) > 1000) bullets.splice(i, 1);
     });
 
-    // Враги
     enemies.forEach((en, i) => {
         const angle = Math.atan2(player.y - en.y, player.x - en.x);
-        en.x += Math.cos(angle) * en.speed;
-        en.y += Math.sin(angle) * en.speed;
+        en.x += Math.cos(angle) * 2;
+        en.y += Math.sin(angle) * 2;
 
-        // Коллизия с игроком
-        if (Math.hypot(player.x - en.x, player.y - en.y) < player.size + en.size) {
-            hp -= 0.5;
-            hpEl.innerText = Math.max(0, Math.floor(hp));
-            if (hp <= 0) alert("GAME OVER! Score: " + score);
-        }
-
-        // Попадание пули
         bullets.forEach((b, bi) => {
             if (Math.hypot(b.x - en.x, b.y - en.y) < en.size) {
-                spawnParticles(en.x, en.y, '#ff0055');
+                bloodStains.push({x: en.x, y: en.y, size: 20 + Math.random()*20});
                 enemies.splice(i, 1);
                 bullets.splice(bi, 1);
-                score += 10;
-                scoreEl.innerText = score;
+                score++;
             }
         });
-    });
-
-    // Частицы
-    particles.forEach((p, i) => {
-        p.x += p.vX; p.y += p.vY; p.life -= 0.02;
-        if (p.life <= 0) particles.splice(i, 1);
     });
 }
 
 function draw() {
-    // Темный фон с эффектом размытия для "шлейфа"
-    ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Смещение камеры, чтобы игрок был в центре
+    const camX = canvas.width/2 - player.x;
+    const camY = canvas.height/2 - player.y;
+    ctx.save();
+    ctx.translate(camX, camY);
 
-    // Свечение для игрока
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#00ff00';
-    ctx.fillStyle = player.color;
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.size, 0, Math.PI*2);
-    ctx.fill();
+    // Рисуем сетку (пол)
+    ctx.strokeStyle = '#333';
+    for(let i = -2000; i < 2000; i+=100) {
+        ctx.beginPath(); ctx.moveTo(i, -2000); ctx.lineTo(i, 2000); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-2000, i); ctx.lineTo(2000, i); ctx.stroke();
+    }
 
-    // Враги (Красный неон)
-    ctx.shadowColor = '#ff0055';
-    ctx.fillStyle = '#ff0055';
+    // Кровь
+    bloodStains.forEach(s => ctx.drawImage(imgBlood, s.x - s.size/2, s.y - s.size/2, s.size, s.size));
+
+    // Игрок
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.angle + Math.PI/2);
+    ctx.drawImage(imgPlayer, -player.size/2, -player.size/2, player.size, player.size);
+    ctx.restore();
+
+    // Враги
     enemies.forEach(en => {
-        ctx.beginPath();
-        ctx.rect(en.x - en.size/2, en.y - en.size/2, en.size, en.size);
-        ctx.fill();
+        const enAngle = Math.atan2(player.y - en.y, player.x - en.x);
+        ctx.save();
+        ctx.translate(en.x, en.y);
+        ctx.rotate(enAngle + Math.PI/2);
+        ctx.drawImage(imgZombie, -en.size/2, -en.size/2, en.size, en.size);
+        ctx.restore();
     });
 
     // Пули
-    ctx.shadowColor = '#ffff00';
-    ctx.fillStyle = '#ffff00';
-    bullets.forEach(b => {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
-        ctx.fill();
-    });
+    ctx.fillStyle = 'yellow';
+    bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 4));
 
-    // Отрисовка частиц
-    particles.forEach(p => {
-        ctx.globalAlpha = p.life;
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, 2, 2);
-    });
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // UI
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.fillText(`Kills: ${score}`, 20, 40);
 }
 
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
+function loop() { update(); draw(); requestAnimationFrame(loop); }
 loop();
 </script>
 </body>
