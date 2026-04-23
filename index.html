@@ -1,71 +1,190 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>3D Shooter Base</title>
+    <meta charset="UTF-8">
+    <title>Neon Survivor 2026</title>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-family: sans-serif; }
+        body { margin: 0; background: #050505; color: #fff; font-family: 'Courier New', monospace; overflow: hidden; }
+        canvas { display: block; filter: contrast(1.2) brightness(1.1); }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
+        .stats { font-size: 24px; text-shadow: 0 0 10px #00ff00; }
     </style>
 </head>
 <body>
-    <div id="ui">Команда А: 0 | Команда Б: 0</div>
-    <script type="module">
-        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+    <div id="ui">
+        <div class="stats">SCORE: <span id="score">0</span></div>
+        <div style="color: #ff0000;">HP: <span id="hp">100</span>%</div>
+    </div>
+    <canvas id="game"></canvas>
 
-        // 1. Сцена и Камера
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb); // Небо
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const hpEl = document.getElementById('hp');
 
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-        // 2. Свет
-        const light = new THREE.AmbientLight(0x404040); // Мягкий свет
-        scene.add(light);
-        const sun = new THREE.DirectionalLight(0xffffff, 1);
-        sun.position.set(5, 10, 7);
-        scene.add(sun);
+let score = 0;
+let hp = 100;
+const keys = {};
 
-        // 3. Пол (Карта)
-        const planeGeo = new THREE.PlaneGeometry(100, 100);
-        const planeMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
-        const floor = new THREE.Mesh(planeGeo, planeMat);
-        floor.rotation.x = -Math.PI / 2;
-        scene.add(floor);
+// Игрок
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    size: 15,
+    speed: 4,
+    color: '#00ff00',
+    angle: 0
+};
 
-        // 4. Твой персонаж (в 3D это просто куб для начала)
-        const playerGeo = new THREE.BoxGeometry(1, 2, 1);
-        const playerMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-        const player = new THREE.Mesh(playerGeo, playerMat);
-        player.position.y = 1;
-        scene.add(player);
+const bullets = [];
+const enemies = [];
+const particles = [];
 
-        camera.position.z = 5;
-        camera.position.y = 2;
+// Слушаем кнопки
+window.onkeydown = (e) => keys[e.code] = true;
+window.onkeyup = (e) => keys[e.code] = false;
 
-        // 5. Движение (WASD)
-        const keys = {};
-        window.addEventListener('keydown', (e) => keys[e.code] = true);
-        window.addEventListener('keyup', (e) => keys[e.code] = false);
+// Эффект взрыва
+function spawnParticles(x, y, color) {
+    for(let i=0; i<10; i++) {
+        particles.push({
+            x, y, 
+            vX: (Math.random()-0.5)*10, 
+            vY: (Math.random()-0.5)*10, 
+            life: 1, 
+            color
+        });
+    }
+}
 
-        function animate() {
-            requestAnimationFrame(animate);
+// Клик - выстрел
+window.onmousedown = () => {
+    if (hp <= 0) return;
+    const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    bullets.push({
+        x: player.x,
+        y: player.y,
+        vX: Math.cos(angle) * 12,
+        vY: Math.sin(angle) * 12
+    });
+};
 
-            if (keys['KeyW']) player.position.z -= 0.1;
-            if (keys['KeyS']) player.position.z += 0.1;
-            if (keys['KeyA']) player.position.x -= 0.1;
-            if (keys['KeyD']) player.position.x += 0.1;
+const mouse = { x: 0, y: 0 };
+window.onmousemove = (e) => { mouse.x = e.clientX; mouse.y = e.clientY; };
 
-            // Камера следует за игроком
-            camera.position.x = player.position.x;
-            camera.position.z = player.position.z + 5;
+function spawnEnemy() {
+    if (hp <= 0) return;
+    const size = 20;
+    let x, y;
+    if (Math.random() < 0.5) {
+        x = Math.random() < 0.5 ? -size : canvas.width + size;
+        y = Math.random() * canvas.height;
+    } else {
+        x = Math.random() * canvas.width;
+        y = Math.random() < 0.5 ? -size : canvas.height + size;
+    }
+    enemies.push({ x, y, size, speed: 1.5 + (score/100) });
+}
+setInterval(spawnEnemy, 800);
 
-            renderer.render(scene, camera);
+function update() {
+    if (hp <= 0) return;
+
+    // Движение
+    if (keys['KeyW']) player.y -= player.speed;
+    if (keys['KeyS']) player.y += player.speed;
+    if (keys['KeyA']) player.x -= player.speed;
+    if (keys['KeyD']) player.x += player.speed;
+
+    // Пули
+    bullets.forEach((b, i) => {
+        b.x += b.vX; b.y += b.vY;
+        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(i, 1);
+    });
+
+    // Враги
+    enemies.forEach((en, i) => {
+        const angle = Math.atan2(player.y - en.y, player.x - en.x);
+        en.x += Math.cos(angle) * en.speed;
+        en.y += Math.sin(angle) * en.speed;
+
+        // Коллизия с игроком
+        if (Math.hypot(player.x - en.x, player.y - en.y) < player.size + en.size) {
+            hp -= 0.5;
+            hpEl.innerText = Math.max(0, Math.floor(hp));
+            if (hp <= 0) alert("GAME OVER! Score: " + score);
         }
-        animate();
-    </script>
+
+        // Попадание пули
+        bullets.forEach((b, bi) => {
+            if (Math.hypot(b.x - en.x, b.y - en.y) < en.size) {
+                spawnParticles(en.x, en.y, '#ff0055');
+                enemies.splice(i, 1);
+                bullets.splice(bi, 1);
+                score += 10;
+                scoreEl.innerText = score;
+            }
+        });
+    });
+
+    // Частицы
+    particles.forEach((p, i) => {
+        p.x += p.vX; p.y += p.vY; p.life -= 0.02;
+        if (p.life <= 0) particles.splice(i, 1);
+    });
+}
+
+function draw() {
+    // Темный фон с эффектом размытия для "шлейфа"
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Свечение для игрока
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#00ff00';
+    ctx.fillStyle = player.color;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.size, 0, Math.PI*2);
+    ctx.fill();
+
+    // Враги (Красный неон)
+    ctx.shadowColor = '#ff0055';
+    ctx.fillStyle = '#ff0055';
+    enemies.forEach(en => {
+        ctx.beginPath();
+        ctx.rect(en.x - en.size/2, en.y - en.size/2, en.size, en.size);
+        ctx.fill();
+    });
+
+    // Пули
+    ctx.shadowColor = '#ffff00';
+    ctx.fillStyle = '#ffff00';
+    bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
+        ctx.fill();
+    });
+
+    // Отрисовка частиц
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 2, 2);
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
 </body>
 </html>
